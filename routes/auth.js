@@ -35,6 +35,7 @@ route.post("/login", async (req, res) => {
       res.status(400).json({ message: "Username or Password Incorrect" });
     } else {
       const payload = {
+        id: user._id,
         name: user.username,
         email: user.email,
       };
@@ -60,8 +61,9 @@ route.post("/register", (req, res) => {
     });
     user
       .save()
-      .then(() => {
+      .then((data) => {
         const payload = {
+          id: _id,
           name: username,
           email: email,
         };

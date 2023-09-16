@@ -1,6 +1,10 @@
 import express from "express";
 import productRoutes from "./routes/products.js";
 import authRoutes from "./routes/auth.js";
+import typeRoutes from "./routes/types.js";
+import sizeRoutes from "./routes/size.js";
+import cartRoutes from "./routes/cart.js";
+import stockRoutes from "./routes/stocks.js";
 import dotenv from "dotenv";
 import db_connection from "./config/db-connection.js";
 dotenv.config();
@@ -10,6 +14,10 @@ db_connection();
 app.use(express.json());
 app.use("/", authRoutes);
 app.use("/product", productRoutes);
+app.use("/type", typeRoutes);
+app.use("/size", sizeRoutes);
+app.use("/stock", stockRoutes);
+app.use("/cart", cartRoutes);
 app.listen(port, () => {
   console.log("listening on port " + port);
 });
