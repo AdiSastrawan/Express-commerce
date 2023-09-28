@@ -6,6 +6,7 @@ import sizeRoutes from "./routes/size.js";
 import cartRoutes from "./routes/cart.js";
 import stockRoutes from "./routes/stocks.js";
 import roleRoutes from "./routes/role.js";
+import transactionRoutes from "./routes/transaction.js";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -34,6 +35,7 @@ app.use("/size", sizeRoutes);
 app.use("/stocks", stockRoutes);
 app.use("/carts", cartRoutes);
 app.use("/roles", roleRoutes);
+app.use("/transaction", transactionRoutes);
 app.listen(port, () => {
   console.log("listening on port " + port);
 });

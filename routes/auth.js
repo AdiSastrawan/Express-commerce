@@ -18,10 +18,10 @@ route.post("/token", async (req, res) => {
   }
   jwt.verify(refreshToken, process.env.REFRESH_TOKEN, (err, payload) => {
     if (!err) {
-      const accessToken = generateToken({ name: payload.name, email: payload.email, role: payload.role });
-      res.json({ accessToken: accessToken });
+      const accessToken = generateToken({ id: payload.id, name: payload.name, email: payload.email, role: payload.role });
+      return res.json({ accessToken: accessToken });
     } else {
-      res.sendStatus(403);
+      return res.sendStatus(403);
     }
   });
 });

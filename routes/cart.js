@@ -5,15 +5,19 @@ import express from "express";
 const router = express.Router();
 
 router.get("/", authToken, (req, res) => {
+  console.log(req.user.id);
   Cart.find({ user: req.user.id })
     .populate({
       path: "product",
-      select: "name price ",
-      populate: { path: "stock", select: "quantity size_id", populate: { path: "size_id", select: "name" } },
+      select: "name price image ",
     })
     .populate({
       path: "user",
       select: "username email",
+    })
+    .populate({
+      path: "size",
+      select: "name",
     })
     .then((data) => {
       res.json(data);
@@ -24,8 +28,8 @@ router.get("/all", authToken, (req, res) => {
     .populate({
       path: "product",
       select: "name price ",
-      populate: { path: "stock", select: "quantity size_id", populate: { path: "size_id", select: "name" } },
     })
+    .populate({ path: "size" })
     .populate({
       path: "user",
       select: "username email",
@@ -34,9 +38,20 @@ router.get("/all", authToken, (req, res) => {
       res.json(data);
     });
 });
-router.post("/", authToken, (req, res) => {
+router.post("/", authToken, async (req, res) => {
+  const findCart = await Cart.findOne({ $and: [{ size: req.query.size }, { product: req.query.product }, { user: req.query.user }] });
+  if (findCart != null) {
+    findCart.quantity = parseInt(findCart.quantity) + parseInt(req.query.quantity);
+    try {
+      await findCart.save();
+      return res.json({ message: "Cart saved successfully" });
+    } catch (error) {
+      return res.json({ error: error.message });
+    }
+  }
   const cart = new Cart({
     quantity: req.query.quantity,
+    size: req.query.size,
     product: req.query.product,
     user: req.query.user,
   });
