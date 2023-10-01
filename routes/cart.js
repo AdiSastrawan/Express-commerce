@@ -65,6 +65,16 @@ router.post("/", authToken, async (req, res) => {
       res.json({ message: err.message });
     });
 });
+router.put("/:id", authToken, (req, res) => {
+  console.log("update bro");
+  Cart.findByIdAndUpdate(req.params.id, { quantity: req.body.quantity })
+    .then(() => {
+      return res.json({ message: "Successfully updated" });
+    })
+    .catch((err) => {
+      return res.json({ message: err.message });
+    });
+});
 router.delete("/:id", authToken, (req, res) => {
   Cart.findByIdAndDelete(req.params.id)
     .then(() => {
