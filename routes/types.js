@@ -2,17 +2,20 @@ import express from "express";
 import { Type } from "../models/Type.js";
 import authToken from "../middleware/authToken.js";
 import mongoose from "mongoose";
+import multer from "multer";
+import storage from "../config/storageConfig.js";
 
 const route = express.Router();
-
+const upload = multer({ storage: storage });
 route.get("/", authToken, (req, res) => {
   Type.find().then(function (data) {
     res.send({ data: data });
   });
 });
-route.post("/", authToken, (req, res) => {
+route.post("/", upload.single("image"), authToken, (req, res) => {
   const type = new Type({
-    name: req.query.name,
+    name: req.body.name,
+    image: req.file.path || null,
   });
   type
     .save()
