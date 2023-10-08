@@ -10,6 +10,7 @@ router.get("/", authToken, (req, res) => {
     .populate({
       path: "product",
       select: "name price image ",
+      populate: { path: "stock", select: "quantity size_id" },
     })
     .populate({
       path: "user",
@@ -25,10 +26,7 @@ router.get("/", authToken, (req, res) => {
 });
 router.get("/all", authToken, (req, res) => {
   Cart.find()
-    .populate({
-      path: "product",
-      select: "name price ",
-    })
+    .populate({ path: "product", select: "name image price", populate: { path: "stock", select: "quantity" } })
     .populate({ path: "size" })
     .populate({
       path: "user",

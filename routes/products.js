@@ -12,8 +12,8 @@ const upload = multer({ storage: storage });
 const route = express.Router();
 
 route.get("/", (req, res) => {
-  const page = req.query.page || 1;
-  const displayPage = 10;
+  const page = parseInt(req.query.page) || 1;
+  const displayPage = parseInt(req.query.display) || 5;
   const query = req.query.search ? { name: { $regex: req.query.search.toString(), $options: "i" } } : {};
   if (req.query.type) query["type"] = req.query.type;
   console.log(query);
@@ -25,7 +25,7 @@ route.get("/", (req, res) => {
     .skip(displayPage * (page - 1))
     .then(function (data) {
       Product.countDocuments(query).then((count) => {
-        return res.json({ data, displayPage: displayPage, prev: page - 1 < 1 ? null : page - 1, next: Math.abs(count / displayPage) > page + 1 ? page + 1 : null, totalData: count, current: page });
+        return res.json({ data, displayPage: displayPage, prev: page - 1 < 1 ? null : page - 1, next: count - parseInt(displayPage * page) >= 0 ? page + 1 : null, totalData: count, current: page });
       });
     })
     .catch(function (err) {
