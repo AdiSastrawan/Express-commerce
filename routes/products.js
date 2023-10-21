@@ -16,7 +16,6 @@ route.get("/", (req, res) => {
   const displayPage = parseInt(req.query.display) || 5;
   const query = req.query.search ? { name: { $regex: req.query.search.toString(), $options: "i" } } : {};
   if (req.query.type) query["type"] = req.query.type;
-  console.log(query);
   Product.find(query)
     .populate({ path: "stock", select: "quantity", populate: { path: "size_id", select: "name" } })
     .populate({ path: "type", select: "name" })
@@ -102,4 +101,7 @@ route.delete("/:id", authToken, (req, res) => {
       return res.sendStatus(500).json({ message: err });
     });
 });
+// route.put("/sdsd", (req, res) => {
+//   console.log("tesr");
+// });
 export default route;

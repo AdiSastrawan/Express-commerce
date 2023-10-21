@@ -36,6 +36,18 @@ router.get("/all", authToken, (req, res) => {
       res.json(data);
     });
 });
+router.get("/checkout", authToken, (req, res) => {
+  Cart.find({ $and: [{ isSelected: true }, { user: req.user.id }] })
+    .populate({ path: "product", select: "name image price", populate: { path: "stock", select: "quantity" } })
+    .populate({ path: "size" })
+    .populate({
+      path: "user",
+      select: "username email",
+    })
+    .then((data) => {
+      res.json(data);
+    });
+});
 router.post("/", authToken, async (req, res) => {
   const findCart = await Cart.findOne({ $and: [{ size: req.query.size }, { product: req.query.product }, { user: req.query.user }] });
   if (findCart != null) {
@@ -63,9 +75,27 @@ router.post("/", authToken, async (req, res) => {
       res.json({ message: err.message });
     });
 });
+router.put("/select/all", authToken, (req, res) => {
+  Cart.updateMany({ user: req.user.id }, { isSelected: req.body.isSelected })
+    .then(() => {
+      return res.json({ message: "Successfully updated" });
+    })
+    .catch((err) => {
+      return res.json({ message: err.message });
+    });
+});
 router.put("/:id", authToken, (req, res) => {
-  console.log("update bro");
   Cart.findByIdAndUpdate(req.params.id, { quantity: req.body.quantity })
+    .then(() => {
+      return res.json({ message: "Successfully updated" });
+    })
+    .catch((err) => {
+      return res.json({ message: err.message });
+    });
+});
+
+router.put("/select/:id", authToken, (req, res) => {
+  Cart.findByIdAndUpdate(req.params.id, { isSelected: req.body.isSelected })
     .then(() => {
       return res.json({ message: "Successfully updated" });
     })
