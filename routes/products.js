@@ -12,21 +12,23 @@ const upload = multer({ storage: storage });
 const route = express.Router();
 
 route.get("/", (req, res) => {
-  const page = req.query.page || 1;
-  const displayPage = 10;
-  Product.find({})
+  const page = parseInt(req.query.page) || 1;
+  const displayPage = parseInt(req.query.display) || 5;
+  const query = req.query.search ? { name: { $regex: req.query.search.toString(), $options: "i" } } : {};
+  if (req.query.type) query["type"] = req.query.type;
+  Product.find(query)
     .populate({ path: "stock", select: "quantity", populate: { path: "size_id", select: "name" } })
     .populate({ path: "type", select: "name" })
     .select("name price image type stock desc")
     .limit(displayPage)
     .skip(displayPage * (page - 1))
     .then(function (data) {
-      Product.estimatedDocumentCount().then((count) => {
-        return res.json({ data, displayPage: displayPage, prev: page - 1 < 1 ? null : page - 1, next: Math.abs(count / displayPage) > page + 1 ? page + 1 : null, totalData: count, current: page });
+      Product.countDocuments(query).then((count) => {
+        return res.json({ data, displayPage: displayPage, prev: page - 1 < 1 ? null : page - 1, next: count - parseInt(displayPage * page) >= 0 ? page + 1 : null, totalData: count, current: page });
       });
     })
     .catch(function (err) {
-      res.sendStatus(500).json({ error: "Internal Server Error" });
+      return res.sendStatus(500).json({ error: "Internal Server Error" });
     });
 });
 route.post("/", authToken, upload.single("image"), async (req, res) => {
@@ -40,7 +42,6 @@ route.post("/", authToken, upload.single("image"), async (req, res) => {
     desc: req.body.desc,
     stock: null,
   });
-  console.log(typeof req.body.stock);
 
   let temp = typeof req.body.stock == "object" ? [...req.body.stock] : [...JSON.parse(req.body.stock)];
   temp.forEach((e) => {
@@ -100,4 +101,7 @@ route.delete("/:id", authToken, (req, res) => {
       return res.sendStatus(500).json({ message: err });
     });
 });
+// route.put("/sdsd", (req, res) => {
+//   console.log("tesr");
+// });
 export default route;

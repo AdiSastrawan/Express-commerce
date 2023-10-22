@@ -7,12 +7,12 @@ const route = express.Router();
 
 route.get("/", authToken, (req, res) => {
   Size.find().then(function (data) {
-    res.send({ data: data });
+    res.send(data);
   });
 });
 route.post("/", authToken, (req, res) => {
   const product = new Size({
-    name: req.query.name,
+    name: req.body.name,
   });
   product
     .save()
@@ -24,12 +24,16 @@ route.post("/", authToken, (req, res) => {
     });
 });
 route.get("/:id", authToken, (req, res) => {
-  Size.findById(req.params.id).then((data) => {
-    res.json({ data });
-  });
+  Size.findById(req.params.id)
+    .then((data) => {
+      return res.json(data);
+    })
+    .catch((err) => {
+      console.error(err);
+    });
 });
 route.put("/:id", authToken, (req, res) => {
-  Size.findByIdAndUpdate(req.params.id, { name: req.query.name }).then((data, err) => {
+  Size.findByIdAndUpdate(req.params.id, { name: req.body.name }).then((data, err) => {
     if (err) res.send({ message: err.message });
     res.json({ message: "Succesfully update data" });
   });

@@ -8,5 +8,5 @@ const productSchema = new mongoose.Schema({
   type: { type: mongoose.Schema.Types.ObjectId, ref: "Type", default: null },
   stock: [{ type: mongoose.Schema.Types.ObjectId, ref: "Stock" }],
 });
-
+productSchema.index({ name: "text" });
 export const Product = mongoose.model("Product", productSchema);

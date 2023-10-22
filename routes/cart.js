@@ -10,6 +10,7 @@ router.get("/", authToken, (req, res) => {
     .populate({
       path: "product",
       select: "name price image ",
+      populate: { path: "stock", select: "quantity size_id" },
     })
     .populate({
       path: "user",
@@ -25,10 +26,19 @@ router.get("/", authToken, (req, res) => {
 });
 router.get("/all", authToken, (req, res) => {
   Cart.find()
+    .populate({ path: "product", select: "name image price", populate: { path: "stock", select: "quantity" } })
+    .populate({ path: "size" })
     .populate({
-      path: "product",
-      select: "name price ",
+      path: "user",
+      select: "username email",
     })
+    .then((data) => {
+      res.json(data);
+    });
+});
+router.get("/checkout", authToken, (req, res) => {
+  Cart.find({ $and: [{ isSelected: true }, { user: req.user.id }] })
+    .populate({ path: "product", select: "name image price", populate: { path: "stock", select: "quantity" } })
     .populate({ path: "size" })
     .populate({
       path: "user",
@@ -63,6 +73,34 @@ router.post("/", authToken, async (req, res) => {
     })
     .catch((err) => {
       res.json({ message: err.message });
+    });
+});
+router.put("/select/all", authToken, (req, res) => {
+  Cart.updateMany({ user: req.user.id }, { isSelected: req.body.isSelected })
+    .then(() => {
+      return res.json({ message: "Successfully updated" });
+    })
+    .catch((err) => {
+      return res.json({ message: err.message });
+    });
+});
+router.put("/:id", authToken, (req, res) => {
+  Cart.findByIdAndUpdate(req.params.id, { quantity: req.body.quantity })
+    .then(() => {
+      return res.json({ message: "Successfully updated" });
+    })
+    .catch((err) => {
+      return res.json({ message: err.message });
+    });
+});
+
+router.put("/select/:id", authToken, (req, res) => {
+  Cart.findByIdAndUpdate(req.params.id, { isSelected: req.body.isSelected })
+    .then(() => {
+      return res.json({ message: "Successfully updated" });
+    })
+    .catch((err) => {
+      return res.json({ message: err.message });
     });
 });
 router.delete("/:id", authToken, (req, res) => {
