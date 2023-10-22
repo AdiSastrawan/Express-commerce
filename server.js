@@ -17,6 +17,7 @@ import db_connection from "./config/db-connection.js"
 import credentials from "./middleware/credentials.js"
 import corsOptions from "./config/corsOptions.js"
 import sendEmail from "./utils/sendEmail.js"
+import invoice from "./template/email/invoice.js"
 const __filename = fileURLToPath(import.meta.url)
 
 const __dirname = path.dirname(__filename)
@@ -37,6 +38,22 @@ app.use("/stocks", stockRoutes)
 app.use("/carts", cartRoutes)
 app.use("/roles", roleRoutes)
 app.use("/transaction", transactionRoutes)
+// sendEmail(
+//   "aykens110703@gmail.com",
+//   invoice({
+//     _id: "X5oJ6dbV",
+//     products: [
+//       { name: "I Love myself T-Shirt", price: 400003, quantity: "1", size: "M", _id: { $oid: "65338e791c250576a3d29561" } },
+//       { name: "I tried to be perfect", price: 120000, quantity: "1", size: "S", _id: { $oid: "65338e791c250576a3d29562" } },
+//     ],
+//     user_name: "Aykens",
+//     user_email: "aykens110703@gmail.com",
+//     information: { country: "Indonesia", first_name: "Adi", last_name: "Sastrawan", address: "Shivananda Villa", city: "Buleleng", post_code: "81152", phone: "+6289685756351" },
+//     created_at: Date.now(),
+//     modified_at: Date.now(),
+//   }),
+//   "Thank you for your order!!"
+// )
 app.listen(port, () => {
   console.log("listening on port " + port)
 })

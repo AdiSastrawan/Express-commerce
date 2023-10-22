@@ -1,6 +1,5 @@
 import nodemailer from "nodemailer"
 import dotenv from "dotenv"
-import invoice from "../template/email/invoice.js"
 dotenv.config()
 const sendEmail = (email, html, subject = "From losientosupply") => {
   let transporter = nodemailer.createTransport({
@@ -25,6 +24,7 @@ const sendEmail = (email, html, subject = "From losientosupply") => {
     if (err) {
       console.log("Error " + err)
     } else {
+      console.log(data)
       console.log("Email sent successfully")
     }
   })

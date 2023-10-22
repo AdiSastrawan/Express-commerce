@@ -1,4 +1,11 @@
-const invoice = (items) => {
+import rupiahFormater from "../../utils/rupiahFormater.js"
+
+const invoice = (item) => {
+  let sum = 0
+  item.products.forEach((element) => {
+    sum += parseInt(element.price * element.quantity)
+  })
+  const options = { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }
   return `<!DOCTYPE html>
     <html lang="en">
       <head>
@@ -12,9 +19,10 @@ const invoice = (items) => {
           .invoice-container {
             width: 80%;
             margin: 0 auto;
+            color: #25252A;
           }
           .invoice-header {
-            background-color: #4caf50;
+            background-color: #784ED5;
             color: white;
             padding: 20px;
             text-align: center;
@@ -52,34 +60,40 @@ const invoice = (items) => {
             <h1>Invoice</h1>
           </div>
           <div class="invoice-details">
-            <div>Invoice Number: INV123456</div>
-            <div>Invoice Date: October 21, 2023</div>
-            <div>Due Date: November 5, 2023</div>
-          </div>
+            <div>Name: ${item.information.first_name + " " + item.information.last_name}</div>
+            <div>Email: ${item.user_email}</div>
+            <div>Invoice id: ${item._id}</div>
+            <div>Invoice Date: ${new Date(item.created_at).toLocaleString(undefined, options)}</div>
+            <div>Address: ${item.information.address}</div>
+            <div>City: ${item.information.city}</div>
+            <div>Phone Number: ${item.information.phone}</div>
+          </.div>
           <table class="invoice-table">
             <thead>
               <tr>
-                <th>Description</th>
+                <th>Product Name</th>
                 <th>Quantity</th>
-                <th>Unit Price</th>
+                <th>Size</th>
+                <th>Price</th>
                 <th>Total</th>
               </tr>
             </thead>
             <tbody id="body" class="table-body">
-            ${items
+            ${item.products
               .map((e) => {
                 return `<tr>
-              <td>${e.description}</td>
+              <td>${e.name}</td>
               <td>${e.quantity}</td>
-              <td>${e.unitPrice}</td>
-              <td>${parseInt(e.unitPrice * e.quantity)}</td>
+              <td>${e.size}</td>
+              <td>${rupiahFormater(e.price)}</td>
+              <td>${rupiahFormater(parseInt(e.price * e.quantity))}</td>
               </tr>`
               })
               .join("")}
             </tbody>
           </table>
           <div class="invoice-total">
-            <p><strong>Total: $190.00</strong></p>
+            <p><strong>Total: ${rupiahFormater(sum)} </strong></p>
           </div>
         </div>
       </body>

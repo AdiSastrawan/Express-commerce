@@ -72,7 +72,7 @@ route.post("/register", async (req, res) => {
       refresh_token: jwt.sign({ name: username, email: email }, process.env.REFRESH_TOKEN),
       role_id: role._id,
     })
-    let code = Math.floor(Math.random() * 9999) + 1000
+    let code = Math.floor(Math.random() * 8999) + 1000
     sendEmail(email, verification(code), "Verify your email")
     bcrypt.hash(code.toString(), 10).then((hash) => {
       const otp = new OTPVerification({
@@ -108,6 +108,7 @@ route.post("/resendOTP", authToken, async (req, res) => {
   sendEmail(req.user.email, verification(code), "Verify your email")
   bcrypt.hash(code.toString(), 10).then((hash) => {
     verifications.code = hash
+    verifications.expired_at = Date.now() + 3600000
     verifications
       .save()
       .then(() => {
