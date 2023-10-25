@@ -9,6 +9,9 @@ import { Role } from "../models/Role.js"
 import { OTPVerification } from "../models/OTPVerification.js"
 import sendEmail from "../utils/sendEmail.js"
 import verification from "../template/email/verification.js"
+import validation from "../middleware/validation.js"
+import { validationRegister } from "../utils/validation.js"
+import { PasswordReset } from "../models/PasswordReset.js"
 
 dotenv.config()
 const route = express.Router()
@@ -54,14 +57,61 @@ route.post("/login", async (req, res) => {
     }
   })
 })
-route.post("/register", async (req, res) => {
+route.post("/reset-password", authToken, async (req, res) => {
+  const user = await User.findOne({ email: req.user.email })
+  const match = await bcrypt.compare(req.body.password, user.password)
+  if (match) {
+    return res.status(400).json({ error: { message: "Password is the same as the current password" } })
+  }
+
+  const hashedPass = await bcrypt.hash(req.body.password, 10)
+  let code = Math.floor(Math.random() * 8999) + 1000
+  const hashedCode = await bcrypt.hash(code.toString(), 10)
+  const passReset = new PasswordReset({
+    user_id: user._id,
+    code: hashedCode,
+    new_password: hashedPass,
+    expired_at: Date.now() + 3600000,
+  })
+  await passReset.save()
+  sendEmail(req.user.email, verification(code), "Verify Password Reset")
+  return res.status(200).json({ message: "verification has sent" })
+})
+route.post("/verify-reset-password", authToken, async (req, res) => {
+  const { otp } = req.body
+  const passRes = await PasswordReset.findOne({ user_id: req.user.id })
+  if (!passRes) {
+    return res.status(404).json({ error: { message: "User not found" } })
+  }
+  if (passRes.expired_at > Date.now()) {
+    const match = bcrypt.compare(otp.toString(), passRes.code)
+    if (match) {
+      try {
+        const user = await User.findByIdAndUpdate(req.user.id, { password: passRes.new_password, refresh_token: null })
+        await passRes.deleteOne()
+        res.clearCookie("jwt", { httpOnly: true, sameSite: "None", secure: true })
+        return res.status(200).json({ message: "Succesfully update password" })
+      } catch (error) {
+        return res.json({ error: { message: error.message } })
+      }
+    }
+    return res.status(400).json({ message: "Invalid Token" })
+  }
+  return res.status(400).json({ message: "Token Expired" })
+})
+route.post("/register", validation(validationRegister), async (req, res) => {
   const { username, email, password, confirm_password } = req.body
   if (password != confirm_password) {
-    return res.status(400).send({ message: "Confirm password is not the same" })
+    return res.status(400).send({ error: { message: "Confirm password is not the same" } })
+  }
+
+  const findEmail = await User.findOne({ email: email })
+  if (findEmail) {
+    return res.status(400).json({ error: { message: "Email already existed" } })
   }
   const role = await Role.findOne({ name: "costumer" })
   if (role == null) {
-    res.json({ message: "Role does not exist" })
+    res.json({ error: { message: "Role does not exist" } })
     return 0
   }
   bcrypt.hash(password, 10).then((hash) => {
@@ -104,7 +154,7 @@ route.post("/register", async (req, res) => {
 })
 route.post("/resendOTP", authToken, async (req, res) => {
   const verifications = await OTPVerification.findOne({ user_id: req.user.id })
-  let code = Math.floor(Math.random() * 9999) + 1000
+  let code = Math.floor(Math.random() * 8999) + 1000
   sendEmail(req.user.email, verification(code), "Verify your email")
   bcrypt.hash(code.toString(), 10).then((hash) => {
     verifications.code = hash
@@ -122,9 +172,7 @@ route.post("/resendOTP", authToken, async (req, res) => {
 })
 route.post("/verifyOTP", authToken, async (req, res) => {
   const { otp } = req.body
-  console.log(otp)
   const verification = await OTPVerification.findOne({ user_id: req.user.id })
-  console.log(verification)
   if (verification.expired_at > Date.now()) {
     bcrypt.compare(`${otp}`, verification.code).then((match) => {
       console.log(match)
