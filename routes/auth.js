@@ -57,8 +57,8 @@ route.post("/login", async (req, res) => {
     }
   })
 })
-route.post("/reset-password", authToken, async (req, res) => {
-  const user = await User.findOne({ email: req.user.email })
+route.post("/reset-password", async (req, res) => {
+  const user = await User.findOne({ email: req.body.email })
   const match = await bcrypt.compare(req.body.password, user.password)
   if (match) {
     return res.status(400).json({ error: { message: "Password is the same as the current password" } })
@@ -66,36 +66,31 @@ route.post("/reset-password", authToken, async (req, res) => {
 
   const hashedPass = await bcrypt.hash(req.body.password, 10)
   let code = Math.floor(Math.random() * 8999) + 1000
-  const hashedCode = await bcrypt.hash(code.toString(), 10)
   const passReset = new PasswordReset({
     user_id: user._id,
-    code: hashedCode,
+    code: code,
     new_password: hashedPass,
-    expired_at: Date.now() + 3600000,
+    expired_at: Date.now() + 300000,
   })
   await passReset.save()
-  sendEmail(req.user.email, verification(code), "Verify Password Reset")
+  sendEmail(req.body.email, verification(code), "Verify Password Reset")
   return res.status(200).json({ message: "verification has sent" })
 })
-route.post("/verify-reset-password", authToken, async (req, res) => {
+route.post("/verify-reset-password", async (req, res) => {
   const { otp } = req.body
-  const passRes = await PasswordReset.findOne({ user_id: req.user.id })
+  const passRes = await PasswordReset.findOne({ code: otp })
   if (!passRes) {
-    return res.status(404).json({ error: { message: "User not found" } })
+    return res.status(400).json({ message: "Invalid Token" })
   }
   if (passRes.expired_at > Date.now()) {
-    const match = bcrypt.compare(otp.toString(), passRes.code)
-    if (match) {
-      try {
-        const user = await User.findByIdAndUpdate(req.user.id, { password: passRes.new_password, refresh_token: null })
-        await passRes.deleteOne()
-        res.clearCookie("jwt", { httpOnly: true, sameSite: "None", secure: true })
-        return res.status(200).json({ message: "Succesfully update password" })
-      } catch (error) {
-        return res.json({ error: { message: error.message } })
-      }
+    try {
+      const user = await User.findByIdAndUpdate(passRes.user_id, { password: passRes.new_password, refresh_token: null })
+      await passRes.deleteOne()
+      res.clearCookie("jwt", { httpOnly: true, sameSite: "None", secure: true })
+      return res.status(200).json({ message: "Succesfully update password" })
+    } catch (error) {
+      return res.json({ error: { message: error.message } })
     }
-    return res.status(400).json({ message: "Invalid Token" })
   }
   return res.status(400).json({ message: "Token Expired" })
 })
@@ -124,16 +119,16 @@ route.post("/register", validation(validationRegister), async (req, res) => {
     })
     let code = Math.floor(Math.random() * 8999) + 1000
     sendEmail(email, verification(code), "Verify your email")
-    bcrypt.hash(code.toString(), 10).then((hash) => {
-      const otp = new OTPVerification({
-        user_id: user._id,
-        code: hash,
-        expired_at: Date.now() + 3600000,
-      })
-      otp.save().then(() => {
-        console.log("has been created")
-      })
+
+    const otp = new OTPVerification({
+      user_id: user._id,
+      code: code,
+      expired_at: Date.now() + 300000,
     })
+    otp.save().then(() => {
+      console.log("has been created")
+    })
+
     user
       .save()
       .then((data) => {
@@ -156,40 +151,55 @@ route.post("/resendOTP", authToken, async (req, res) => {
   const verifications = await OTPVerification.findOne({ user_id: req.user.id })
   let code = Math.floor(Math.random() * 8999) + 1000
   sendEmail(req.user.email, verification(code), "Verify your email")
-  bcrypt.hash(code.toString(), 10).then((hash) => {
-    verifications.code = hash
-    verifications.expired_at = Date.now() + 3600000
-    verifications
-      .save()
-      .then(() => {
-        console.log("has been updated")
-        return res.status(200).json({ message: "Code has been resend" })
-      })
-      .catch((err) => {
-        return res.status(500).json({ message: err.message })
-      })
-  })
+
+  verifications.code = code
+  verifications.expired_at = Date.now() + 300000
+  verifications
+    .save()
+    .then(() => {
+      console.log("has been updated")
+      return res.status(200).json({ message: "Code has been resend" })
+    })
+    .catch((err) => {
+      return res.status(500).json({ message: err.message })
+    })
 })
+route.post("/reset-password-resendOTP", async (req, res) => {
+  const user = await User.findOne({ email: req.body.email })
+  const verifications = await PasswordReset.findOne({ user_id: user._id })
+  let code = Math.floor(Math.random() * 8999) + 1000
+  sendEmail(req.body.email, verification(code), "Verify Password Reset")
+
+  verifications.code = code
+  verifications.expired_at = Date.now() + 300000
+  verifications
+    .save()
+    .then(() => {
+      console.log("has been updated")
+      return res.status(200).json({ message: "Code has been resend" })
+    })
+    .catch((err) => {
+      return res.status(500).json({ message: err.message })
+    })
+})
+
 route.post("/verifyOTP", authToken, async (req, res) => {
   const { otp } = req.body
   const verification = await OTPVerification.findOne({ user_id: req.user.id })
   if (verification.expired_at > Date.now()) {
-    bcrypt.compare(`${otp}`, verification.code).then((match) => {
-      console.log(match)
-      if (!match) {
-        return res.status(400).json({ message: "Invalid token" })
-      }
-      User.findByIdAndUpdate(req.user.id, { verified: true, verified_at: Date.now() })
-        .then(() => {
-          verification.deleteOne().then(() => {
-            console.log("User deleted successfully")
-          })
-          return res.status(200).json({ message: "User updated successfully" })
+    if (otp != verification.code) {
+      return res.status(400).json({ message: "Invalid token" })
+    }
+    User.findByIdAndUpdate(req.user.id, { verified: true, verified_at: Date.now() })
+      .then(() => {
+        verification.deleteOne().then(() => {
+          console.log("User deleted successfully")
         })
-        .catch((err) => {
-          return res.status(400).json({ message: err.message })
-        })
-    })
+        return res.status(200).json({ message: "User updated successfully" })
+      })
+      .catch((err) => {
+        return res.status(400).json({ message: err.message })
+      })
   } else {
     return res.status(400).json({ message: "Code expired" })
   }
