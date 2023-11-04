@@ -1,6 +1,7 @@
 import { Cart } from "../models/Cart.js"
 import authToken from "../middleware/authToken.js"
 import express from "express"
+import verifiedAuth from "../middleware/verifiedAuth.js"
 
 const router = express.Router()
 
@@ -20,10 +21,10 @@ router.get("/", authToken, (req, res) => {
       select: "name",
     })
     .then((data) => {
-      res.json(data)
+      return res.status(200).json(data)
     })
 })
-router.get("/all", authToken, (req, res) => {
+router.get("/all", authToken, verifiedAuth, (req, res) => {
   Cart.find()
     .populate({ path: "product", select: "name image price", populate: { path: "stock", select: "quantity" } })
     .populate({ path: "size" })
@@ -35,7 +36,7 @@ router.get("/all", authToken, (req, res) => {
       res.json(data)
     })
 })
-router.get("/checkout", authToken, (req, res) => {
+router.get("/checkout", authToken, verifiedAuth, (req, res) => {
   Cart.find({ $and: [{ isSelected: true }, { user: req.user.id }] })
     .populate({ path: "product", select: "name image price", populate: { path: "stock", select: "quantity" } })
     .populate({ path: "size" })
@@ -47,7 +48,7 @@ router.get("/checkout", authToken, (req, res) => {
       res.json(data)
     })
 })
-router.post("/", authToken, async (req, res) => {
+router.post("/", authToken, verifiedAuth, async (req, res) => {
   const findCart = await Cart.findOne({ $and: [{ size: req.query.size }, { product: req.query.product }, { user: req.query.user }] })
   if (findCart != null) {
     findCart.quantity = parseInt(findCart.quantity) + parseInt(req.query.quantity)
@@ -74,7 +75,7 @@ router.post("/", authToken, async (req, res) => {
       res.status(500).json({ message: err.message })
     })
 })
-router.put("/select/all", authToken, (req, res) => {
+router.put("/select/all", verifiedAuth, authToken, (req, res) => {
   Cart.updateMany({ user: req.user.id }, { isSelected: req.body.isSelected })
     .then(() => {
       return res.json({ message: "Successfully updated" })
@@ -83,7 +84,7 @@ router.put("/select/all", authToken, (req, res) => {
       return res.json({ message: err.message })
     })
 })
-router.put("/:id", authToken, (req, res) => {
+router.put("/:id", authToken, verifiedAuth, (req, res) => {
   Cart.findByIdAndUpdate(req.params.id, { quantity: req.body.quantity })
     .then(() => {
       return res.status(200).json({ message: "Successfully updated" })
@@ -93,7 +94,7 @@ router.put("/:id", authToken, (req, res) => {
     })
 })
 
-router.put("/select/:id", authToken, (req, res) => {
+router.put("/select/:id", authToken, verifiedAuth, (req, res) => {
   Cart.findByIdAndUpdate(req.params.id, { isSelected: req.body.isSelected })
     .then(() => {
       return res.json({ message: "Successfully updated" })
@@ -102,7 +103,7 @@ router.put("/select/:id", authToken, (req, res) => {
       return res.json({ message: err.message })
     })
 })
-router.delete("/:id", authToken, (req, res) => {
+router.delete("/:id", authToken, verifiedAuth, (req, res) => {
   Cart.findByIdAndDelete(req.params.id)
     .then(() => {
       res.json({ message: "Successfully delete" })
@@ -111,7 +112,7 @@ router.delete("/:id", authToken, (req, res) => {
       res.json({ message: err.message })
     })
 })
-router.delete("/", authToken, (req, res) => {
+router.delete("/", authToken, verifiedAuth, (req, res) => {
   Cart.deleteMany({ user: req.user.id })
     .then(() => res.json({ message: "Successfully delete cart" }))
     .catch((err) => {

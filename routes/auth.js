@@ -24,7 +24,7 @@ route.post("/token", async (req, res) => {
   }
   jwt.verify(refreshToken, process.env.REFRESH_TOKEN, (err, payload) => {
     if (!err) {
-      const accessToken = generateToken({ id: payload.id, name: payload.name, email: payload.email, role: payload.role })
+      const accessToken = generateToken({ id: payload.id, name: payload.name, email: payload.email, role: payload.role, verified: payload.verified })
       return res.json({ accessToken: accessToken })
     } else {
       return res.sendStatus(403)
@@ -35,17 +35,18 @@ route.post("/login", async (req, res) => {
   const { username, password } = req.body
   const user = await User.findOne({ $or: [{ username: username }, { email: username }] }).populate({ path: "role_id", select: "name" })
   if (!user) {
-    return res.status(400).json({ message: "Username or Password Incorrect" })
+    return res.status(400).json({ error: { message: "Username or Password Incorrect" } })
   }
   bcrypt.compare(password, user.password).then((match) => {
     if (!match) {
-      return res.status(400).json({ message: "Username or Password Incorrect" })
+      return res.status(400).json({ error: { message: "Username or Password Incorrect" } })
     } else {
       const payload = {
         id: user._id,
         name: user.username,
         email: user.email,
         role: user.role_id.name,
+        verified: user.verified,
       }
       const accessToken = generateToken(payload)
       const refresh_token = jwt.sign(payload, process.env.REFRESH_TOKEN)
@@ -59,9 +60,12 @@ route.post("/login", async (req, res) => {
 })
 route.post("/reset-password", async (req, res) => {
   const user = await User.findOne({ email: req.body.email })
+  if (user == null) {
+    return res.status(400).json({ error: { value: "email", message: "Email does not exist" } })
+  }
   const match = await bcrypt.compare(req.body.password, user.password)
   if (match) {
-    return res.status(400).json({ error: { message: "Password is the same as the current password" } })
+    return res.status(400).json({ error: { value: "password", message: "Password is the same as the current password" } })
   }
 
   const hashedPass = await bcrypt.hash(req.body.password, 10)
@@ -114,8 +118,8 @@ route.post("/register", validation(validationRegister), async (req, res) => {
       username: username,
       email: email,
       password: hash,
-      refresh_token: jwt.sign({ name: username, email: email }, process.env.REFRESH_TOKEN),
       role_id: role._id,
+      // refresh_token: jwt.sign({ name: username, email: email }, process.env.REFRESH_TOKEN),
     })
     let code = Math.floor(Math.random() * 8999) + 1000
     sendEmail(email, verification(code), "Verify your email")
@@ -137,10 +141,13 @@ route.post("/register", validation(validationRegister), async (req, res) => {
           name: username,
           email: email,
           role: role.name,
+          verified: data.verified,
         }
-        const accessToken = generateToken(payload)
-        res.cookie("jwt", user.refresh_token, { secure: true, httpOnly: true, sameSite: "None", maxAge: 86400000 })
-        return res.json({ accessToken, message: "Verify your account" })
+        User.findByIdAndUpdate(data._id, { refreshToken: jwt.sign(payload, process.env.REFRESH_TOKEN) }).then(() => {
+          const accessToken = generateToken(payload)
+          res.cookie("jwt", user.refresh_token, { secure: true, httpOnly: true, sameSite: "None", maxAge: 86400000 })
+          return res.json({ accessToken, message: "Verify your account" })
+        })
       })
       .catch((error) => {
         res.send({ message: "Error: " + error.message })
@@ -190,12 +197,21 @@ route.post("/verifyOTP", authToken, async (req, res) => {
     if (otp != verification.code) {
       return res.status(400).json({ message: "Invalid token" })
     }
-    User.findByIdAndUpdate(req.user.id, { verified: true, verified_at: Date.now() })
-      .then(() => {
+    const payload = {
+      id: req.user_id,
+      name: req.user.name,
+      email: req.user.email,
+      role: req.user.role,
+      verified: true,
+    }
+    User.findByIdAndUpdate(req.user.id, { verified: true, verified_at: Date.now(), refresh_token: jwt.sign(payload, process.env.REFRESH_TOKEN) })
+      .then((data) => {
+        const accessToken = generateToken(payload)
+        res.cookie("jwt", data.refresh_token, { secure: true, httpOnly: true, sameSite: "None", maxAge: 86400000 })
         verification.deleteOne().then(() => {
           console.log("User deleted successfully")
         })
-        return res.status(200).json({ message: "User updated successfully" })
+        return res.status(200).json({ message: "User updated successfully", accessToken: accessToken })
       })
       .catch((err) => {
         return res.status(400).json({ message: err.message })
@@ -208,7 +224,7 @@ route.delete("/logout", async (req, res) => {
   console.log(req.cookies)
   const cookies = req.cookies
   if (!cookies?.jwt) {
-    return res.sendStatus(401).json({ message: "You must be logged in" })
+    return res.status(401).json({ message: "You must be logged in" })
   }
   const user = await User.findOne({ refresh_token: cookies.jwt })
   // return res.send(user);

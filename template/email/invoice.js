@@ -62,7 +62,7 @@ const invoice = (item) => {
           <div class="invoice-details">
             <div>Name: ${item.information.first_name + " " + item.information.last_name}</div>
             <div>Email: ${item.user_email}</div>
-            <div>Invoice id: ${item._id}</div>
+            <div>Invoice id: ${item._id.toUpperCase()}</div>
             <div>Invoice Date: ${new Date(item.created_at).toLocaleString(undefined, options)}</div>
             <div>Address: ${item.information.address}</div>
             <div>City: ${item.information.city}</div>

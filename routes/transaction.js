@@ -8,16 +8,17 @@ import { Stock } from "../models/Stock.js"
 import { Size } from "../models/Size.js"
 import invoice from "../template/email/invoice.js"
 import sendEmail from "../utils/sendEmail.js"
+import verifiedAuth from "../middleware/verifiedAuth.js"
 
 const route = express.Router()
 
-route.get("/", authToken, (req, res) => {
+route.get("/", authToken, verifiedAuth, (req, res) => {
   Transaction.find({ user_email: req.user.email }).then(function (data) {
     res.send({ data: data })
   })
 })
 
-route.post("/", authToken, async (req, res) => {
+route.post("/", authToken, verifiedAuth, async (req, res) => {
   try {
     const products = typeof req.body.products == "object" ? req.body.products : JSON.parse(req.body.products)
     let isError = false
