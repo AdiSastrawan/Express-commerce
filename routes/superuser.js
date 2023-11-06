@@ -10,9 +10,9 @@ route.get("/list-admin", superUserMiddleware, async (req, res) => {
   const page = parseInt(req.query.page) || 1
   const displayPage = parseInt(req.query.display) || 5
   const admin = await Role.findOne({ name: "admin" })
-  const query = req.query.search ? { name: { $regex: req.query.search.toString(), $options: "i" }, role_id: admin._id } : { role_id: admin._id }
+  const query = req.query.search ? { username: { $regex: req.query.search.toString(), $options: "i" }, role_id: admin._id } : { role_id: admin._id }
   try {
-    const user = await User.find({ role_id: admin._id })
+    const user = await User.find(query)
       .select(" username email created_at verified_at ")
       .limit(displayPage)
       .skip(displayPage * (page - 1))

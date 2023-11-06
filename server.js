@@ -6,6 +6,7 @@ import sizeRoutes from "./routes/size.js"
 import cartRoutes from "./routes/cart.js"
 import stockRoutes from "./routes/stocks.js"
 import roleRoutes from "./routes/role.js"
+import dahsboardRoutes from "./routes/dashboard.js"
 import transactionRoutes from "./routes/transaction.js"
 import userRoutes from "./routes/superuser.js"
 import dotenv from "dotenv"
@@ -39,6 +40,7 @@ app.use("/carts", cartRoutes)
 app.use("/roles", roleRoutes)
 app.use("/transaction", transactionRoutes)
 app.use("/superuser", userRoutes)
+app.use("/dashboard", dahsboardRoutes)
 app.listen(port, () => {
   console.log("listening on port " + port)
 })

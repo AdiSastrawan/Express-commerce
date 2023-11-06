@@ -136,26 +136,16 @@ route.post("/register", validation(validationRegister), async (req, res) => {
     user
       .save()
       .then((data) => {
-        const payload = {
-          id: data._id,
-          name: username,
-          email: email,
-          role: role.name,
-          verified: data.verified,
-        }
-        User.findByIdAndUpdate(data._id, { refreshToken: jwt.sign(payload, process.env.REFRESH_TOKEN) }).then(() => {
-          const accessToken = generateToken(payload)
-          res.cookie("jwt", user.refresh_token, { secure: true, httpOnly: true, sameSite: "None", maxAge: 86400000 })
-          return res.json({ accessToken, message: "Verify your account" })
-        })
+        return res.json({ accessToken, message: "Verify your account" })
       })
       .catch((error) => {
         res.send({ message: "Error: " + error.message })
       })
   })
 })
-route.post("/resendOTP", authToken, async (req, res) => {
-  const verifications = await OTPVerification.findOne({ user_id: req.user.id })
+route.post("/resendOTP", async (req, res) => {
+  const user = await User.findOne({ email: req.body.email }).populate({ path: "role_id", select: "name" })
+  const verifications = await OTPVerification.findOne({ user_id: user._id })
   let code = Math.floor(Math.random() * 8999) + 1000
   sendEmail(req.user.email, verification(code), "Verify your email")
 
@@ -190,21 +180,22 @@ route.post("/reset-password-resendOTP", async (req, res) => {
     })
 })
 
-route.post("/verifyOTP", authToken, async (req, res) => {
-  const { otp } = req.body
-  const verification = await OTPVerification.findOne({ user_id: req.user.id })
+route.post("/verifyOTP", async (req, res) => {
+  const { otp, email } = req.body
+  const user = await User.findOne({ email: email }).populate({ path: "role_id", select: "name" })
+  const verification = await OTPVerification.findOne({ user_id: user._id })
   if (verification.expired_at > Date.now()) {
     if (otp != verification.code) {
       return res.status(400).json({ message: "Invalid token" })
     }
     const payload = {
-      id: req.user_id,
-      name: req.user.name,
-      email: req.user.email,
-      role: req.user.role,
+      id: user._id,
+      name: user.username,
+      email: user.email,
+      role: user.role_id.name,
       verified: true,
     }
-    User.findByIdAndUpdate(req.user.id, { verified: true, verified_at: Date.now(), refresh_token: jwt.sign(payload, process.env.REFRESH_TOKEN) })
+    User.findByIdAndUpdate(user._id, { verified: true, verified_at: Date.now(), refresh_token: jwt.sign(payload, process.env.REFRESH_TOKEN) })
       .then((data) => {
         const accessToken = generateToken(payload)
         res.cookie("jwt", data.refresh_token, { secure: true, httpOnly: true, sameSite: "None", maxAge: 86400000 })
