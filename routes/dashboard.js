@@ -20,11 +20,44 @@ route.get("/low-stock", adminMiddleware, async (req, res) => {
   return res.json(stock)
 })
 route.get("/recent-transaction", adminMiddleware, async (req, res) => {
-  const transaction = await Transaction.find({}).select("user_name user_email products created_at ").limit(5).sort({ created_at: -1 })
+  const transaction = await Transaction.aggregate([
+    { $unwind: "$products" },
+    {
+      $group: {
+        _id: "$_id", // You need to group by the transaction ID or any other unique identifier
+        total_price: {
+          $sum: {
+            $multiply: ["$products.price", "$products.quantity"],
+          },
+        },
+        data: { $first: "$$ROOT" }, // Preserve other fields in the document
+      },
+    },
+    { $limit: 5 },
+    {
+      $sort: { "data.created_at": -1 }, // Assuming there's a createdAt field for the transaction
+    },
+    {
+      $replaceRoot: {
+        newRoot: {
+          $mergeObjects: ["$data", { total_price: "$total_price" }],
+        },
+      },
+    },
+  ])
   return res.json(transaction)
 })
 route.get("/annual-transaction", adminMiddleware, async (req, res) => {
+  const currentYear = new Date().getFullYear()
   const transaction = await Transaction.aggregate([
+    {
+      $match: {
+        created_at: {
+          $gte: new Date(currentYear, 0, 1), // Start of the current year
+          $lt: new Date(currentYear + 1, 0, 1), // Start of the next year
+        },
+      },
+    },
     {
       $unwind: "$products", // Deconstruct the products array
     },
@@ -33,7 +66,6 @@ route.get("/annual-transaction", adminMiddleware, async (req, res) => {
         _id: {
           month: { $month: "$created_at" }, // Extract month from created_at field
           year: { $year: "$created_at" }, // Extract year from created_at field
-          productName: "$products.name", // Group by product name
         },
         totalProductPrice: { $sum: { $multiply: ["$products.price", "$products.quantity"] } }, // Calculate total price for each product
       },
@@ -54,5 +86,15 @@ route.get("/count-transaction", adminMiddleware, async (req, res) => {
 route.get("/count-products", adminMiddleware, async (req, res) => {
   const productCount = await Product.countDocuments()
   return res.json({ amount: productCount })
+})
+route.get("/count-costumer", adminMiddleware, async (req, res) => {
+  const costumer = await Role.findOne({ name: "costumer" })
+  const user = await User.count({ role_id: costumer._id })
+  return res.json({ amount: user })
+})
+route.get("/count-admin", adminMiddleware, async (req, res) => {
+  const admin = await Role.findOne({ name: "admin" })
+  const user = await User.count({ role_id: admin._id })
+  return res.json({ amount: user })
 })
 export default route

@@ -9,6 +9,7 @@ import { Size } from "../models/Size.js"
 import invoice from "../template/email/invoice.js"
 import sendEmail from "../utils/sendEmail.js"
 import verifiedAuth from "../middleware/verifiedAuth.js"
+import { makeId } from "../utils/generateRandomString.js"
 
 const route = express.Router()
 
@@ -32,7 +33,7 @@ route.post("/", authToken, verifiedAuth, async (req, res) => {
     if (isError == true) throw new Error("Cart not Found")
 
     const transaction = new Transaction({
-      _id: nanoid(8),
+      _id: makeId(8),
       products: products.map((product) => {
         return { name: product.name, quantity: product.quantity, size: product.size, price: product.price }
       }),
