@@ -11,6 +11,7 @@ const sendEmail = (email, html, subject = "From losientosupply") => {
       clientId: process.env.OAUTH_CLIENTID,
       clientSecret: process.env.OAUTH_CLIENT_SECRET,
       refreshToken: process.env.OAUTH_REFRESH_TOKEN,
+      accessToken: process.env.OAUTH_ACCESS_TOKEN,
     },
   })
 
@@ -24,7 +25,6 @@ const sendEmail = (email, html, subject = "From losientosupply") => {
     if (err) {
       console.log("Error " + err)
     } else {
-      console.log(data)
       console.log("Email sent successfully")
     }
   })
