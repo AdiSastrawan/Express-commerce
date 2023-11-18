@@ -32,13 +32,25 @@ route.get("/", (req, res) => {
       return res.sendStatus(500).json({ error: "Internal Server Error" })
     })
 })
-route.post("/", adminMiddleware, upload.single("image"), async (req, res) => {
-  // console.log(JSON.parse(req.body.stock));
-  // return 0;
+route.get("/recent", async (req, res) => {
+  try {
+    let tmp = []
+    const product = await Product.find({}).select("image").sort({ created_at: -1 }).limit(3)
+    product.forEach((p) => {
+      tmp.push(p.image[0])
+    })
+    return res.json(tmp)
+  } catch (error) {
+    return res.status(500).json({ error: { message: error.message } })
+  }
+})
+route.post("/", adminMiddleware, upload.array("images", 6), async (req, res) => {
   const product = new Product({
     name: req.body.name,
     price: req.body.price,
-    image: req.file.path,
+    image: req.files.map((image) => {
+      return image.path
+    }),
     type: req.body.type,
     desc: req.body.desc,
     stock: null,
@@ -102,6 +114,7 @@ route.delete("/:id", adminMiddleware, (req, res) => {
       return res.sendStatus(500).json({ message: err })
     })
 })
+
 // route.put("/sdsd", (req, res) => {
 //   console.log("tesr");
 // });

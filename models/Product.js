@@ -1,12 +1,13 @@
-import mongoose from "mongoose";
+import mongoose from "mongoose"
 
 const productSchema = new mongoose.Schema({
   name: { type: String },
-  image: { type: String },
+  image: [{ type: String }],
   price: { type: Number },
   desc: { type: String },
   type: { type: mongoose.Schema.Types.ObjectId, ref: "Type", default: null },
   stock: [{ type: mongoose.Schema.Types.ObjectId, ref: "Stock" }],
-});
-productSchema.index({ name: "text" });
-export const Product = mongoose.model("Product", productSchema);
+  created_at: { type: Date, default: Date.now },
+})
+productSchema.index({ name: "text" })
+export const Product = mongoose.model("Product", productSchema)
