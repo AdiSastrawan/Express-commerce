@@ -2,7 +2,7 @@ import express from "express"
 import { User } from "../models/User.js"
 import { Role } from "../models/Role.js"
 import bcrypt from "bcrypt"
-import superUserMiddleware from "../middleware/superuserMiddleware.js"
+import superUserMiddleware from "../middleware/superUserMiddleware.js"
 
 const route = express.Router()
 
